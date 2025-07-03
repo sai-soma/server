@@ -28,7 +28,7 @@ app.use(express.urlencoded({ extended: true }));
 
 // ✅ Fix CORS issues for frontend & OAuth
 app.use(cors({
-    origin: "http://localhost:3000", // ✅ Allow frontend
+    origin: "https://client-1-t9ar.onrender.com/", // ✅ Allow frontend
     methods: "GET,POST,PUT,DELETE",  // ✅ Allow required HTTP methods
     allowedHeaders: "Content-Type,Authorization",
     credentials: true // ✅ Allow cookies if needed
