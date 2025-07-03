@@ -2,7 +2,7 @@ const jwt = require("jsonwebtoken");
 
 app.use(
   cors({
-    origin: "http://localhost:3000", // Frontend URL (Change for production)
+    origin: "https://client-1-t9ar.onrender.com", // Frontend URL (Change for production)
     methods: "GET,POST,PUT,DELETE",
     allowedHeaders: "Content-Type, Authorization",
     credentials: true, // Needed for authentication
