@@ -1,7 +1,7 @@
 const Wallet = require("../models/Wallet");
 const Application = require("../models/Application");
 const Job = require("../models/jobModel");
-const Reward = require("../models/rewards");
+const Reward = require("../models/Rewards");
 const WithdrawRequest = require("../models/WithdrawRequest");
 const User = require("../models/User");
 // ✅ Get Wallet by userId
