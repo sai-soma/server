@@ -171,7 +171,7 @@ exports.signup = async (req, res) => {
     await newUser.save();
 
     // Send verification email
-    const verificationURL = `${process.env.REACT_APP_API_UR}/verify-email?token=${verificationToken}&email=${email}`;
+    const verificationURL = `${process.env.REACT_APP_API_URL}/verify-email?token=${verificationToken}&email=${email}`;
 
     const mailOptions = {
       from: process.env.EMAIL_USER,
