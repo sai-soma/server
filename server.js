@@ -28,11 +28,12 @@ app.use(express.urlencoded({ extended: true }));
 
 // ✅ Fix CORS issues for frontend & OAuth
 app.use(cors({
-    origin: "https://client-1-t9ar.onrender.com/", // ✅ Allow frontend
-    methods: "GET,POST,PUT,DELETE",  // ✅ Allow required HTTP methods
-    allowedHeaders: "Content-Type,Authorization",
-    credentials: true // ✅ Allow cookies if needed
-  }));
+  origin: "https://client-1-t9ar.onrender.com",
+  methods: "GET,POST,PUT,DELETE",
+  allowedHeaders: "Content-Type,Authorization",
+  credentials: true
+}));
+
 // ✅ Fix Cross-Origin-Opener-Policy issue
 app.use((req, res, next) => {
   res.setHeader("Cross-Origin-Opener-Policy", "unsafe-none");
