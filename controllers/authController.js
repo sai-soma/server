@@ -126,17 +126,17 @@ exports.signup = async (req, res) => {
   try {
     const { fullName, phone, email, password, userId } = req.body;
 
-    // Safety check for required fields
+    // ✅ 1. Validate required fields
     if (!fullName || !phone || !email || !password || !userId) {
       return res.status(400).json({ message: "All fields are required" });
     }
 
-    // Check for environment variables
+    // ✅ 2. Check env config
     if (!process.env.JWT_SECRET || !process.env.EMAIL_USER) {
       return res.status(500).json({ message: "Server misconfiguration" });
     }
 
-    // Check if email already exists
+    // ✅ 3. Check for existing email
     let userExists = await User.findOne({ email: email.toLowerCase() });
     if (userExists) {
       if (!userExists.isVerified && userExists.verificationTokenExpires < Date.now()) {
@@ -147,25 +147,25 @@ exports.signup = async (req, res) => {
       }
     }
 
-    // Check if userId already exists
+    // ✅ 4. Check for existing userId
     let userIdExists = await User.findOne({ userId: userId.toLowerCase() });
     if (userIdExists) {
       if (!userIdExists.isVerified && userIdExists.verificationTokenExpires < Date.now()) {
         await User.deleteOne({ _id: userIdExists._id });
-        console.log("Deleted expired unverified user with userId:", userId);
+        console.log("Deleted expired unverified userId:", userId);
       } else {
         return res.status(400).json({ message: "User ID already taken" });
       }
     }
 
-    // Hash password
+    // ✅ 5. Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Generate verification token
+    // ✅ 6. Generate and hash email verification token
     const verificationToken = crypto.randomBytes(32).toString("hex");
     const hashedToken = crypto.createHash("sha256").update(verificationToken).digest("hex");
 
-    // Create new user
+    // ✅ 7. Create and save new user
     const newUser = new User({
       fullName,
       phone,
@@ -179,13 +179,9 @@ exports.signup = async (req, res) => {
 
     await newUser.save();
 
-    // Generate JWT for verify-email link
-    const token = jwt.sign({ userId: newUser.userId }, process.env.JWT_SECRET, { expiresIn: "7d" });
+    // ✅ 8. Send verification email with plain token
+    const verificationURL = `https://client-1-t9ar.onrender.com/#/verify-email?token=${verificationToken}&email=${email}`;
 
-    // Construct verification link (hash routing included)
-    const verificationURL = `https://client-1-t9ar.onrender.com/#/verify-email?token=${token}&email=${email}`;
-
-    // Email content
     const mailOptions = {
       from: process.env.EMAIL_USER,
       to: email,
@@ -200,8 +196,8 @@ exports.signup = async (req, res) => {
               Verify Email Address
             </a>
           </div>
-          <p><strong>Important:</strong> This verification link will expire in 24 hours. If you don't verify your email within this time, your account will be automatically removed and you'll need to sign up again.</p>
-          <p>If the button doesn't work, copy and paste this link: ${verificationURL}</p>
+          <p><strong>Note:</strong> This link will expire in 24 hours. If it expires, you’ll need to sign up again.</p>
+          <p>If the button doesn't work, copy and paste this link in your browser: ${verificationURL}</p>
         </div>
       `,
     };
@@ -209,12 +205,12 @@ exports.signup = async (req, res) => {
     try {
       await transporter.sendMail(mailOptions);
     } catch (emailErr) {
-      console.error("Email Sending Failed:", emailErr);
-      await User.deleteOne({ _id: newUser._id }); // Cleanup if email fails
+      console.error("Email sending failed:", emailErr);
+      await User.deleteOne({ _id: newUser._id });
       return res.status(500).json({ message: "Failed to send verification email. Please try again." });
     }
 
-    // Final response
+    // ✅ 9. Final response
     res.status(201).json({
       message: "Signup successful. Please check your email to verify your account.",
       user: {
@@ -225,7 +221,6 @@ exports.signup = async (req, res) => {
         email: newUser.email,
         isVerified: newUser.isVerified,
       },
-      token,
     });
   } catch (error) {
     console.error("Signup Error:", error);
