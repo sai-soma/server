@@ -881,13 +881,13 @@ exports.deleteBankDetails = async (req, res) => {
     res.status(500).json({ error: "Error deleting bank details" });
   }
 };
-// Inside controllers/authController.js
+
 exports.verifyEmail = async (req, res) => {
   try {
     const { token } = req.query;
 
     if (!token) {
-      return res.status(400).json({ message: "Token is required" });
+      return res.status(400).json({ message: "Verification token is required." });
     }
 
     const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
@@ -895,26 +895,25 @@ exports.verifyEmail = async (req, res) => {
     const user = await User.findOne({ verificationToken: hashedToken });
 
     if (!user) {
-      return res.status(400).json({ message: "Invalid token" });
+      return res.status(400).json({ message: "Invalid or already used token." });
     }
 
-    // Check if token is expired
+    // Check token expiry
     if (user.verificationTokenExpires < Date.now()) {
-      // Delete unverified user with expired token
       await User.deleteOne({ _id: user._id });
-      return res.status(400).json({ message: "Token has expired. Please sign up again." });
+      return res.status(400).json({ message: "Token expired. Please register again." });
     }
 
-    // Mark user as verified
+    // Verify user
     user.isVerified = true;
     user.verificationToken = undefined;
     user.verificationTokenExpires = undefined;
 
     await user.save();
 
-    res.status(200).json({ message: "Email verified successfully" });
+    return res.status(200).json({ message: "Email verified successfully." });
   } catch (err) {
-    console.error("Email verification error:", err);
-    res.status(500).json({ message: "Internal server error" });
+    console.error("Email verification failed:", err);
+    return res.status(500).json({ message: "Internal server error." });
   }
 };
