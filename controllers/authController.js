@@ -126,13 +126,22 @@ exports.signup = async (req, res) => {
   try {
     const { fullName, phone, email, password, userId } = req.body;
 
+    // Safety check for required fields
+    if (!fullName || !phone || !email || !password || !userId) {
+      return res.status(400).json({ message: "All fields are required" });
+    }
+
+    // Check for environment variables
+    if (!process.env.JWT_SECRET || !process.env.EMAIL_USER) {
+      return res.status(500).json({ message: "Server misconfiguration" });
+    }
+
     // Check if email already exists
     let userExists = await User.findOne({ email: email.toLowerCase() });
     if (userExists) {
-      // If user exists but is unverified and token expired, delete and allow re-signup
       if (!userExists.isVerified && userExists.verificationTokenExpires < Date.now()) {
         await User.deleteOne({ _id: userExists._id });
-        console.log('Deleted expired unverified user:', email);
+        console.log("Deleted expired unverified user:", email);
       } else {
         return res.status(400).json({ message: "Email already registered" });
       }
@@ -141,10 +150,9 @@ exports.signup = async (req, res) => {
     // Check if userId already exists
     let userIdExists = await User.findOne({ userId: userId.toLowerCase() });
     if (userIdExists) {
-      // Same logic for userId
       if (!userIdExists.isVerified && userIdExists.verificationTokenExpires < Date.now()) {
         await User.deleteOne({ _id: userIdExists._id });
-        console.log('Deleted expired unverified user with userId:', userId);
+        console.log("Deleted expired unverified user with userId:", userId);
       } else {
         return res.status(400).json({ message: "User ID already taken" });
       }
@@ -153,6 +161,7 @@ exports.signup = async (req, res) => {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    // Generate verification token
     const verificationToken = crypto.randomBytes(32).toString("hex");
     const hashedToken = crypto.createHash("sha256").update(verificationToken).digest("hex");
 
@@ -165,14 +174,18 @@ exports.signup = async (req, res) => {
       userId: userId.toLowerCase(),
       verificationToken: hashedToken,
       verificationTokenExpires: Date.now() + 24 * 60 * 60 * 1000, // 24 hours
-      isVerified: false // Explicitly set this
+      isVerified: false,
     });
 
     await newUser.save();
 
-    // Send verification email
+    // Generate JWT for verify-email link
+    const token = jwt.sign({ userId: newUser.userId }, process.env.JWT_SECRET, { expiresIn: "7d" });
+
+    // Construct verification link (hash routing included)
     const verificationURL = `https://client-1-t9ar.onrender.com/#/verify-email?token=${token}&email=${email}`;
 
+    // Email content
     const mailOptions = {
       from: process.env.EMAIL_USER,
       to: email,
@@ -197,14 +210,11 @@ exports.signup = async (req, res) => {
       await transporter.sendMail(mailOptions);
     } catch (emailErr) {
       console.error("Email Sending Failed:", emailErr);
-      // Delete the user if email fails to send
-      await User.deleteOne({ _id: newUser._id });
+      await User.deleteOne({ _id: newUser._id }); // Cleanup if email fails
       return res.status(500).json({ message: "Failed to send verification email. Please try again." });
     }
 
-    // Generate JWT Token (but user still needs to verify email to login)
-    const token = jwt.sign({ userId: newUser.userId }, process.env.JWT_SECRET, { expiresIn: "7d" });
-
+    // Final response
     res.status(201).json({
       message: "Signup successful. Please check your email to verify your account.",
       user: {
@@ -213,13 +223,13 @@ exports.signup = async (req, res) => {
         fullName: newUser.fullName,
         phone: newUser.phone,
         email: newUser.email,
-        isVerified: newUser.isVerified
+        isVerified: newUser.isVerified,
       },
       token,
     });
   } catch (error) {
     console.error("Signup Error:", error);
-    res.status(500).json({ message: "Server error", error });
+    res.status(500).json({ message: "Server error", error: error.message });
   }
 };
 
