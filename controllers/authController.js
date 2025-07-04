@@ -124,37 +124,32 @@ exports.setPassword = async (req, res) => {
 
 exports.signup = async (req, res) => {
   try {
-    console.log("➡️ Incoming signup request:", req.body);
-
     const { fullName, phone, email, password, userId } = req.body;
 
-    if (!fullName || !phone || !email || !password || !userId) {
-      console.log("❌ Missing required field(s)");
-      return res.status(400).json({ message: "All fields are required" });
-    }
-
+    // Check if email already exists
     let userExists = await User.findOne({ email: email.toLowerCase() });
     if (userExists) {
+      // If user exists but is unverified and token expired, delete and allow re-signup
       if (!userExists.isVerified && userExists.verificationTokenExpires < Date.now()) {
         await User.deleteOne({ _id: userExists._id });
-        console.log('🗑️ Deleted expired unverified user:', email);
+        console.log('Deleted expired unverified user:', email);
       } else {
-        console.log("❌ Email already registered:", email);
         return res.status(400).json({ message: "Email already registered" });
       }
     }
 
+    // Check if userId already exists
     let userIdExists = await User.findOne({ userId: userId.toLowerCase() });
     if (userIdExists) {
+      // Same logic for userId
       if (!userIdExists.isVerified && userIdExists.verificationTokenExpires < Date.now()) {
         await User.deleteOne({ _id: userIdExists._id });
-        console.log('🗑️ Deleted expired unverified userId:', userId);
+        console.log('Deleted expired unverified user with userId:', userId);
       } else {
-        console.log("❌ User ID already taken:", userId);
         return res.status(400).json({ message: "User ID already taken" });
       }
     }
-    
+
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
