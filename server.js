@@ -26,9 +26,6 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// ✅ Fix CORS issues for frontend & OAuth
-const cors = require("cors");
-
 app.use(cors({
   origin: ["https://client-1-t9ar.onrender.com", "http://localhost:3000"],
   methods: ["GET", "POST", "PUT", "DELETE"],
